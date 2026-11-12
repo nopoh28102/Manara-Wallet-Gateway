@@ -37,7 +37,7 @@ jobs:
         working-directory: apps/listener
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug assembleRelease
       - name: Upload debug APK (not for production payments)
         uses: actions/upload-artifact@v4
         with:
