@@ -135,7 +135,6 @@ class Api(private val context: Context) {
 
     private fun networkKind(): String {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return "unknown"
-        // activeNetwork is unavailable on Android 5.x (API 21-22).
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
             @Suppress("DEPRECATION")
             val info = cm.activeNetworkInfo ?: return "offline"
