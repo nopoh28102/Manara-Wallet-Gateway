@@ -108,7 +108,8 @@ class ForwarderService : Service() {
     private fun buildNotification(text: String): Notification {
         val open = PendingIntent.getActivity(
             this, 0, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) PendingIntent.FLAG_IMMUTABLE else 0) or
+                PendingIntent.FLAG_UPDATE_CURRENT,
         )
         return NotificationCompat.Builder(this, App.CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_wallet)

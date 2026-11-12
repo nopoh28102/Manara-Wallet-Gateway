@@ -1,6 +1,7 @@
 package com.tahweel.listener
 
 import android.content.Context
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 
@@ -31,7 +32,13 @@ class Prefs(context: Context) {
         }
 
     val configured: Boolean
-        get() = serverUrl.startsWith("http") && token.isNotBlank()
+        get() = try {
+            val uri = Uri.parse(serverUrl)
+            uri.scheme.equals("https", ignoreCase = true) &&
+                !uri.host.isNullOrBlank() &&
+                uri.userInfo == null &&
+                token.isNotBlank()
+        } catch (_: Exception) { false }
 
     fun effectiveDeviceName(): String = deviceName.ifBlank { "${Build.MANUFACTURER} ${Build.MODEL}" }
 }
