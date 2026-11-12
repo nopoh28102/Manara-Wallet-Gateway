@@ -57,7 +57,6 @@ class MainActivity : AppCompatActivity() {
             toast("Service start requested")
             handler.postDelayed({ renderStatus() }, 800)
         }
-        // The synthetic-message tool is only available in development builds.
         b.debugBtn.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
         b.debugBtn.setOnClickListener { startActivity(Intent(this, DebugActivity::class.java)) }
         b.logsBtn.setOnClickListener { startActivity(Intent(this, LogsActivity::class.java)) }
