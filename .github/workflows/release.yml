@@ -120,7 +120,8 @@ jobs:
           APK=$(find apps/listener/app/build/outputs/apk/release -maxdepth 1 -name '*-release.apk' -type f | head -n 1)
           test -n "$APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
-          sha256sum "$APK" > "$APK.sha256"
+          SHA=$(sha256sum "$APK" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$(basename "$APK")" > "$APK.sha256"
           echo "apk=$APK" >> "$GITHUB_OUTPUT"
           echo "checksum=$APK.sha256" >> "$GITHUB_OUTPUT"
       - name: Upload signed APK build artifact
