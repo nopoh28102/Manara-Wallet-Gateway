@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">بوابة محافظ منارة</string>
+    <string name="notif_channel">متابعة مدفوعات منارة</string>
+    <string name="notif_title">مستقبل رسائل محفظة منارة</string>
+    <string name="debug_title">اختبار رسالة تجريبية</string>
+    <string name="logs_title">سجل الأحداث</string>
+    <string name="section_server">إعدادات الخادم</string>
+    <string name="hint_server_url">رابط الخادم (https://pay.mnaraty.com)</string>
+    <string name="hint_token">رمز الاتصال الآمن (INGEST_TOKEN)</string>
+    <string name="hint_device_name">اسم الجهاز (مثال: موبايل المحفظة)</string>
+    <string name="btn_save">حفظ</string>
+    <string name="btn_test">اختبار الاتصال</string>
+    <string name="section_permissions">الأذونات</string>
+    <string name="perm_sms">استقبال الرسائل النصية</string>
+    <string name="perm_notifications">عرض الإشعارات</string>
+    <string name="perm_battery">استثناء تحسين استهلاك البطارية</string>
+    <string name="perm_background">تشغيل التطبيق في الخلفية</string>
+    <string name="btn_grant">منح الإذن</string>
+    <string name="btn_open">فتح</string>
+    <string name="btn_grant_all">منح الأذونات اللازمة</string>
+    <string name="perm_hint">تأكد من منح الأذونات المطلوبة. على هواتف سامسونج، أضف التطبيق إلى قائمة التطبيقات التي لا تدخل في وضع السكون، وثبته في قائمة التطبيقات الحديثة.</string>
+    <string name="section_service">خدمة استقبال الرسائل</string>
+    <string name="btn_start_service">تشغيل الخدمة أو إعادة تشغيلها</string>
+    <string name="btn_debug">اختبار رسالة تجريبية</string>
+    <string name="btn_logs">سجل الأحداث</string>
+    <string name="section_status">حالة الاتصال</string>
+    <string name="status_placeholder">—</string>
+    <string name="debug_custom_title">إرسال رسالة تجريبية</string>
+    <string name="hint_debug_address">اسم المرسل (مثال: e&amp; money)</string>
+    <string name="hint_debug_body">نص الرسالة</string>
+    <string name="btn_send_test">إرسال إلى الخادم</string>
+    <string name="debug_custom_hint">الصق نموذجًا لرسالة المحفظة لاختبار تحليلها على الخادم. يتم حفظ الاختبار هناك، ولذلك لا تستخدم مبالغ أو طلبات حقيقية.</string>
+    <string name="btn_send">إرسال</string>
+    <string name="btn_refresh">تحديث</string>
+    <string name="btn_clear">مسح</string>
+    <string name="btn_share">مشاركة</string>
+    <string name="btn_copy">نسخ</string>
+</resources>
