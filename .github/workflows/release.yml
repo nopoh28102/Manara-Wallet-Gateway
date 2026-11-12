@@ -2,7 +2,18 @@ name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version (example 1.1.0-manara-beta.1); build a signed APK artifact only'
+        required: true
+        type: string
+        default: '1.1.0-manara-beta.1'
+
+permissions:
+  contents: read
 
 jobs:
   ci:
@@ -10,6 +21,7 @@ jobs:
 
   docker:
     name: Publish Docker image
+    if: github.ref_type == 'tag'
     needs: ci
     runs-on: ubuntu-latest
     permissions:
@@ -39,45 +51,102 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  apk:
-    name: Publish Android listener
+  android-release:
+    name: Build signed Android Release APK
     needs: ci
     runs-on: ubuntu-latest
+    timeout-minutes: 35
     permissions:
       contents: write
     env:
-      KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      RELEASE_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || inputs.version }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
-      - name: Release keystore
-        if: env.KEYSTORE_BASE64 != ''
+          java-version: '21'
+      - name: Verify version and signing secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${RELEASE_VERSION#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::Invalid version: $VERSION"; exit 1; }
+          for key in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!key:-}" ]; then
+              echo "::error::Missing GitHub Actions secret: $key. See docs/MANARA-RELEASES.md."
+              exit 1
+            fi
+          done
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+      - name: Prepare release signing
+        shell: bash
         working-directory: apps/listener
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > release.jks
+          set -euo pipefail
+          umask 077
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > release.jks
+          test -s release.jks
           {
-            echo "storeFile=release.jks"
-            echo "storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}"
-            echo "keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}"
-            echo "keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}"
+            printf 'storeFile=release.jks\n'
+            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
           } > keystore.properties
-      - name: assembleRelease
+          chmod 600 keystore.properties release.jks
+      - name: Build signed release APK
+        shell: bash
         working-directory: apps/listener
-        run: chmod +x gradlew && ./gradlew --no-daemon assembleRelease -PversionName="${GITHUB_REF_NAME#v}"
-      - name: GitHub release
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest assembleRelease -PversionName="$VERSION" -PversionCode="$((100000 + GITHUB_RUN_NUMBER))"
+      - name: Verify APK signature and checksum
+        id: apk
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=$(find apps/listener/app/build/outputs/apk/release -maxdepth 1 -name '*-release.apk' -type f | head -n 1)
+          test -n "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose --print-certs "$APK"
+          SHA=$(sha256sum "$APK" | awk '{print $1}')
+          printf '%s  %s\n' "$SHA" "$(basename "$APK")" > "$APK.sha256"
+          echo "apk=$APK" >> "$GITHUB_OUTPUT"
+          echo "checksum=$APK.sha256" >> "$GITHUB_OUTPUT"
+      - name: Upload signed APK build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manara-wallet-gateway-signed-release-${{ github.run_number }}
+          path: |
+            ${{ steps.apk.outputs.apk }}
+            ${{ steps.apk.outputs.checksum }}
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish to GitHub Releases
+        if: github.ref_type == 'tag'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          APK: ${{ steps.apk.outputs.apk }}
+          CHECKSUM: ${{ steps.apk.outputs.checksum }}
         run: |
-          apk=$(ls apps/listener/app/build/outputs/apk/release/*.apk)
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$apk" --clobber
+          set -euo pipefail
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$APK" "$CHECKSUM" --clobber --repo "$GITHUB_REPOSITORY"
           else
-            flags=(--title "$TAG" --generate-notes)
-            [[ "$TAG" == *-* ]] && flags+=(--prerelease)
-            gh release create "$TAG" "$apk" "${flags[@]}"
+            args=(--repo "$GITHUB_REPOSITORY" --title "Manara Wallet Gateway $TAG" --generate-notes --verify-tag)
+            if [[ "$TAG" == *-* ]]; then args+=(--prerelease); fi
+            gh release create "$TAG" "$APK" "$CHECKSUM" "${args[@]}"
           fi
