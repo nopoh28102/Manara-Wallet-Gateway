@@ -40,8 +40,6 @@ object ForwardFilter {
     fun rules(store: Store): ForwardRules? = ForwardRules.parse(store.stat(RULES_KEY))
 
     fun shouldForward(rules: ForwardRules?, address: String, body: String): Boolean {
-        // No rule sync, empty allowlist or filter disabled: forward nothing.
-        // Even money-related personal SMS must never be uploaded by default.
         if (rules == null || !rules.filter || rules.senders.isEmpty()) return false
         return isTrustedSender(rules.senders, address)
     }
