@@ -20,7 +20,6 @@ class App : Application() {
 
         fun createChannel(context: Context) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            // NotificationChannel is not available on Android 5, 6 or 7.
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             if (nm.getNotificationChannel(CHANNEL_ID) != null) return
             val channel = NotificationChannel(
