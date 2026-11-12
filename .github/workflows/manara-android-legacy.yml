@@ -26,8 +26,6 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      # GitHub-hosted Ubuntu runners include Android command-line tools.
-      # The third-party setup action currently requests a removed "tools" package.
       - name: Verify SDK and install API 35
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME"
