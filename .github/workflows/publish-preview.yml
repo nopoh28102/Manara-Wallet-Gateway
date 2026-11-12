@@ -1,0 +1,83 @@
+name: Publish Android Preview (test only)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/publish-preview.yml'
+      - 'apps/listener/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-preview-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    name: Build and publish test-only APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install Android SDK 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+      - name: Test and build debug APK
+        working-directory: apps/listener
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - name: Prepare preview release assets
+        id: preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="v0.0.0-preview.${GITHUB_RUN_NUMBER}"
+          APK=$(find apps/listener/app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' | head -n 1)
+          test -n "$APK"
+          mkdir -p dist
+          cp "$APK" "dist/Manara-Wallet-Gateway-${VERSION}-TEST-ONLY.apk"
+          (
+            cd dist
+            sha256sum *.apk > "Manara-Wallet-Gateway-${VERSION}-TEST-ONLY.sha256"
+          )
+          echo "tag=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "apk=dist/Manara-Wallet-Gateway-${VERSION}-TEST-ONLY.apk" >> "$GITHUB_OUTPUT"
+          echo "sha=dist/Manara-Wallet-Gateway-${VERSION}-TEST-ONLY.sha256" >> "$GITHUB_OUTPUT"
+      - name: Upload preview test artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manara-wallet-preview-${{ github.run_number }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+      - name: Publish GitHub pre-release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.preview.outputs.tag }}
+          APK: ${{ steps.preview.outputs.apk }}
+          CHECKSUM: ${{ steps.preview.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" "$APK" "$CHECKSUM" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Manara Wallet Gateway $TAG (TEST ONLY)" \
+            --notes "UNSIGNED-FOR-PRODUCTION DEBUG PREVIEW. Not suitable for real wallet collections or automatic course activation. It may read wallet SMS and exposes development diagnostics. Use only on a dedicated test phone with no sensitive SMS. SMS messages are not reliable proof of a received payment. The signed production release requires the owner-controlled Android signing secrets and independent payment verification." \
+            --prerelease \
+            --latest=false
