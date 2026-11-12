@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
@@ -56,6 +57,7 @@ class MainActivity : AppCompatActivity() {
             toast("Service start requested")
             handler.postDelayed({ renderStatus() }, 800)
         }
+        b.debugBtn.visibility = if (BuildConfig.DEBUG) View.VISIBLE else View.GONE
         b.debugBtn.setOnClickListener { startActivity(Intent(this, DebugActivity::class.java)) }
         b.logsBtn.setOnClickListener { startActivity(Intent(this, LogsActivity::class.java)) }
         b.grantAllBtn.setOnClickListener { grantNext() }
@@ -157,9 +159,9 @@ class MainActivity : AppCompatActivity() {
         fun at(key: String): String = store.stat(key)?.toLongOrNull()?.let { Clock.local(it) } ?: "—"
         val rules = ForwardFilter.rules(store)
         val forwarding = when {
-            rules == null -> "all SMS (no rules from the server yet)"
-            !rules.filter -> "all SMS (filter off on the server)"
-            else -> "${rules.senders.size} trusted senders + money keywords"
+            rules == null -> "paused: waiting for trusted sender rules"
+            !rules.filter -> "paused: filtering disabled on server"
+            else -> "${rules.senders.size} exact trusted senders only"
         }
         b.statusText.text = listOf(
             "device id      : ${prefs.deviceId}",

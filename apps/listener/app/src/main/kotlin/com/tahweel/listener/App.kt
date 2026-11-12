@@ -4,6 +4,7 @@ import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
+import android.os.Build
 
 class App : Application() {
     override fun onCreate() {
@@ -15,10 +16,11 @@ class App : Application() {
     }
 
     companion object {
-        const val CHANNEL_ID = "tahweel-listener"
+        const val CHANNEL_ID = "manara-wallet-listener"
 
         fun createChannel(context: Context) {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
             if (nm.getNotificationChannel(CHANNEL_ID) != null) return
             val channel = NotificationChannel(
                 CHANNEL_ID,

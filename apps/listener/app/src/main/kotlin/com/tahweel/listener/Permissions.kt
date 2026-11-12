@@ -33,7 +33,8 @@ object Permissions {
 
     fun ignoresBatteryOptimizations(context: Context): Boolean {
         val pm = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        return pm.isIgnoringBatteryOptimizations(context.packageName)
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.M ||
+            pm.isIgnoringBatteryOptimizations(context.packageName)
     }
 
     fun requestSms(activity: Activity) {
@@ -49,6 +50,7 @@ object Permissions {
     }
 
     fun requestIgnoreBatteryOptimizations(activity: Activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
         val direct = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
             data = Uri.parse("package:${activity.packageName}")
         }
@@ -64,6 +66,10 @@ object Permissions {
     }
 
     fun openAppNotificationSettings(activity: Activity) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+            openAppDetails(activity)
+            return
+        }
         val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
             putExtra(Settings.EXTRA_APP_PACKAGE, activity.packageName)
         }

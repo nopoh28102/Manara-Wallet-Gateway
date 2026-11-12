@@ -16,7 +16,7 @@ fun versionCodeFrom(versionName: String): Int {
     return major * 10000 + minor * 100 + patch
 }
 
-val listenerVersionName = (findProperty("versionName") as String?) ?: "1.0.0"
+val listenerVersionName = (findProperty("versionName") as String?) ?: "1.1.0-manara"
 val listenerVersionCode = (findProperty("versionCode") as String?)?.toInt() ?: versionCodeFrom(listenerVersionName)
 
 android {
@@ -24,8 +24,8 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.tahweel.listener"
-        minSdk = 26
+        applicationId = "com.manara.walletgateway"
+        minSdk = 21
         targetSdk = 34
         versionCode = listenerVersionCode
         versionName = listenerVersionName
@@ -70,7 +70,7 @@ android {
 }
 
 base {
-    archivesName.set("tahweel-listener-${android.defaultConfig.versionName}")
+    archivesName.set("manara-wallet-listener-${android.defaultConfig.versionName}")
 }
 
 kotlin {
@@ -87,4 +87,5 @@ dependencies {
     implementation("androidx.work:work-runtime-ktx:2.10.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    testImplementation("junit:junit:4.13.2")
 }

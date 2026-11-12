@@ -40,8 +40,8 @@ object ForwardFilter {
     fun rules(store: Store): ForwardRules? = ForwardRules.parse(store.stat(RULES_KEY))
 
     fun shouldForward(rules: ForwardRules?, address: String, body: String): Boolean {
-        if (rules == null || !rules.filter) return true
-        return isTrustedSender(rules.senders, address) || mentionsMoney(rules.keywords, body)
+        if (rules == null || !rules.filter || rules.senders.isEmpty()) return false
+        return isTrustedSender(rules.senders, address)
     }
 
     private fun normalize(value: String): String = value.trim().lowercase().replace(WHITESPACE, " ")
@@ -51,11 +51,7 @@ object ForwardFilter {
         if (normalized.isEmpty()) return false
         val allowlist = senders.map(::normalize).filter { it.isNotEmpty() }
         if (NUMERIC_ADDRESS.matches(normalized)) return normalized in allowlist
-        return allowlist.any { normalized == it || normalized.contains(it) }
+        return allowlist.any { normalized == it }
     }
 
-    private fun mentionsMoney(keywords: List<String>, body: String): Boolean {
-        val text = body.lowercase()
-        return keywords.any { it.isNotBlank() && text.contains(it.lowercase()) }
-    }
 }

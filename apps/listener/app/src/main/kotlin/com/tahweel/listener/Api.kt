@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.os.Build
 import android.os.BatteryManager
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -134,6 +135,18 @@ class Api(private val context: Context) {
 
     private fun networkKind(): String {
         val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return "unknown"
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            @Suppress("DEPRECATION")
+            val info = cm.activeNetworkInfo ?: return "offline"
+            if (!info.isConnected) return "offline"
+            @Suppress("DEPRECATION")
+            return when (info.type) {
+                ConnectivityManager.TYPE_WIFI -> "wifi"
+                ConnectivityManager.TYPE_MOBILE -> "cellular"
+                ConnectivityManager.TYPE_ETHERNET -> "ethernet"
+                else -> "other"
+            }
+        }
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return "offline"
         return when {
             caps.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) -> "wifi"

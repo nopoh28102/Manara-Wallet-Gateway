@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Tahweel Listener</string>
-    <string name="notif_channel">Tahweel listener</string>
-    <string name="notif_title">Tahweel listener</string>
+    <string name="app_name">Manara Wallet Listener</string>
+    <string name="notif_channel">Manara Wallet Listener</string>
+    <string name="notif_title">Manara Wallet Listener</string>
     <string name="debug_title">Debug: test message</string>
     <string name="logs_title">Logs</string>
 
     <string name="section_server">Server</string>
-    <string name="hint_server_url">Server URL (https://tahweel.example.com)</string>
+    <string name="hint_server_url">Server URL (https://pay.mnaraty.com)</string>
     <string name="hint_token">Ingest token (INGEST_TOKEN)</string>
     <string name="hint_device_name">Device name (e.g. Samsung M52 office)</string>
     <string name="btn_save">Save</string>

@@ -1,0 +1,47 @@
+name: Manara Android Legacy APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/manara-legacy-android
+    paths:
+      - 'apps/listener/**'
+      - '.github/workflows/manara-android-legacy.yml'
+  pull_request:
+    paths:
+      - 'apps/listener/**'
+      - '.github/workflows/manara-android-legacy.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  legacy-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Verify SDK and install API 35
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          SDKMANAGER=$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager | head -n 1)
+          test -n "$SDKMANAGER"
+          "$SDKMANAGER" --version
+          "$SDKMANAGER" "platforms;android-35" "build-tools;35.0.0"
+      - name: Run local unit tests and build APK
+        working-directory: apps/listener
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - name: Upload debug APK (not for production payments)
+        uses: actions/upload-artifact@v4
+        with:
+          name: manara-wallet-listener-legacy-debug
+          path: apps/listener/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+          retention-days: 7
