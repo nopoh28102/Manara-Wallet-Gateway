@@ -26,9 +26,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
-      - name: Install Android SDK
-        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      # GitHub-hosted Ubuntu runners include Android command-line tools.
+      # The third-party setup action currently requests a removed "tools" package.
+      - name: Verify SDK and install API 35
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          sdkmanager --version
+          sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - name: Run local unit tests and build APK
         working-directory: apps/listener
         run: |
