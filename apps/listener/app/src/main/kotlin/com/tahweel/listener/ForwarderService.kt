@@ -27,7 +27,6 @@ class ForwarderService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var loop: Job? = null
     private val wake = Channel<Unit>(Channel.CONFLATED)
-    private var wakeLock: PowerManager.WakeLock? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -36,7 +35,6 @@ class ForwarderService : Service() {
         running = true
         App.createChannel(this)
         startInForeground(buildNotification("starting…"))
-        acquireWakeLock()
         AppLog.i("service", "created")
     }
 
@@ -54,7 +52,6 @@ class ForwarderService : Service() {
         running = false
         AppLog.w("service", "destroyed")
         loop?.cancel()
-        wakeLock?.let { if (it.isHeld) it.release() }
         super.onDestroy()
     }
 
@@ -73,7 +70,7 @@ class ForwarderService : Service() {
             val prefs = Prefs(this)
             if (prefs.configured) {
                 if (store.pendingCount() > 0 && now >= backoffUntil) {
-                    val outcome = Uploader.drain(this)
+                    val outcome = withNetworkWakeLock { Uploader.drain(this) }
                     backoffUntil = if (outcome.error != null) {
                         val attempts = store.maxAttempts()
                         val delayMs = min(5_000L * (1L shl min(attempts, 6)), MAX_BACKOFF_MS)
@@ -82,7 +79,7 @@ class ForwarderService : Service() {
                     } else 0L
                 }
                 if (now - lastHeartbeat >= HEARTBEAT_MS) {
-                    Uploader.heartbeat(this)
+                    withNetworkWakeLock { Uploader.heartbeat(this) }
                     lastHeartbeat = System.currentTimeMillis()
                 }
             }
@@ -132,20 +129,26 @@ class ForwarderService : Service() {
         }
     }
 
-    private fun acquireWakeLock() {
+    // Keep the CPU awake only during network requests, with a hard timeout.
+    private suspend fun <T> withNetworkWakeLock(block: suspend () -> T): T {
         val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Tahweel:forwarder").apply {
-            setReferenceCounted(false)
-            acquire()
+        val lock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Tahweel:network")
+        lock.setReferenceCounted(false)
+        lock.acquire(NETWORK_WAKE_LOCK_TIMEOUT_MS)
+        return try {
+            block()
+        } finally {
+            if (lock.isHeld) lock.release()
         }
     }
 
     companion object {
         const val NOTIFICATION_ID = 1001
         private const val EXTRA_REASON = "reason"
-        private const val TICK_MS = 15_000L
-        private const val HEARTBEAT_MS = 60_000L
+        private const val TICK_MS = 60_000L
+        private const val HEARTBEAT_MS = 5 * 60_000L
         private const val MAX_BACKOFF_MS = 5 * 60_000L
+        private const val NETWORK_WAKE_LOCK_TIMEOUT_MS = 60_000L
 
         @Volatile var running: Boolean = false
             private set
